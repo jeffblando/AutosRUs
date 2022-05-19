@@ -1,8 +1,4 @@
-# Module 15 Challenge - AutosRUs MechaCar Statistical Analysis - Statistics and R
-
-## Overview
-
-Project Origination Date: 2021-09-13
+## AutosRUs MechaCar Statistical Analysis - Statistics and R
 
 ### Purpose
 
