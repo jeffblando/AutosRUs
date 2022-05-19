@@ -1,0 +1,139 @@
+# MechaCarChallenge.RScript
+
+# Load Libraries
+library(dplyr)
+library(ggplot2)
+library(gridExtra)
+
+# BEGIN Function Definitions
+
+# Regression Equation Text
+lm_eqn <- function(y, x, df){
+  m <- lm(y ~ x, df);
+  eq <- substitute(y == b %.% x + a *","~~r^2~"="~r2,
+                   list(a = format(unname(coef(m)[1]), digits = 3, nsmall = 2),
+                        b = format(unname(coef(m)[2]), digits = 3, nsmall = 2),
+                        r2 = format(summary(m)$r.squared, digits = 3, nsmall = 3)))
+  as.character(as.expression(eq));
+}
+
+# Save Multiple ggplots to Disk at Once
+ggplot_multi_save <- function(save_dir, base_save_name, filetype, base_plot_name, starting_index, ending_index, scale_factor=1) {
+  for (i in starting_index:ending_index) {
+    if (i < 10) {
+      file_name <- paste(save_dir, "/", base_save_name, "_0", i, ".", filetype, sep="")
+    }
+    else {
+      file_name <- paste(save_dir, "/", base_save_name, "_", i, ".", filetype, sep="")
+    }
+    plot_name <- eval(parse(text = paste(base_plot_name, i, sep="")))
+    ggsave(file_name, plot_name, scale=scale_factor)
+    print(paste(paste(base_plot_name, i, sep=""), "saved to:", file_name))
+  }
+}
+
+# END Function Definitions
+
+## Deliverable 1
+
+# Import MechaCar MPG Data
+mpg_data <- read.csv("data/MechaCar_mpg.csv")
+
+# Refactor mpg_data Vectors
+mpg_data$AWD <- as.logical(mpg_data$AWD)
+
+# Perform Linear Regression (Pass all Six Variables)
+mpg_linear_model <- lm(mpg ~ vehicle_length + vehicle_weight + spoiler_angle + ground_clearance + AWD, data=mpg_data)
+
+# Print Summary of Linear Regression Results
+summary(mpg_linear_model)
+
+## Deliverable 1 - Plot Generation Code with Individual Linear Regressions:
+
+### Note for Code Reviewer: I know ggplot has its own way of plotting Linear
+### Regressions using geom_smooth(method="lm", size=0.75, color="red", se=FALSE)
+### I made a conscious decision to roll my own so that I could double-check
+### My equation label results as I went versus the Linear Model before adding the
+### Label to the Plot.
+
+plt1 <- ggplot(mpg_data, aes(x=vehicle_length, y=mpg))
+lm1 <- lm(mpg ~ vehicle_length, data=mpg_data)
+lm1_yvals <- lm1$coefficients['vehicle_length']*mpg_data$vehicle_length + lm1$coefficients['(Intercept)']
+figure_plt1 <- plt1 + geom_point() + labs(x="Vehicle Length, ft.") + geom_line(aes(y=lm1_yvals), color="red", size=0.75) + geom_text(x=14, y=70, label=lm_eqn(mpg_data$mpg, mpg_data$vehicle_length, mpg_data), parse=TRUE)
+#figure_plt1
+
+plt2 <- ggplot(mpg_data, aes(x=vehicle_weight, y=mpg))
+lm2 <- lm(mpg ~ vehicle_weight, data=mpg_data)
+lm2_yvals <- lm2$coefficients['vehicle_weight']*mpg_data$vehicle_weight + lm2$coefficients['(Intercept)']
+figure_plt2 <- plt2 + geom_point() + labs(x="Vehicle Weight, Lbs.") + geom_line(aes(y=lm2_yvals), color="red", size=0.75) + geom_text(x=5000, y=20, label=lm_eqn(mpg_data$mpg, mpg_data$vehicle_weight, mpg_data), parse=TRUE)
+#figure_plt2
+
+plt3 <- ggplot(mpg_data, aes(x=spoiler_angle, y=mpg))
+lm3 <- lm(mpg ~ spoiler_angle, data=mpg_data)
+lm3_yvals <- lm3$coefficients['spoiler_angle']*mpg_data$spoiler_angle + lm3$coefficients['(Intercept)']
+figure_plt3 <- plt3 + geom_point() + labs(x="Spoiler Angle, deg.") + geom_line(aes(y=lm3_yvals), color="red", size=0.75) + geom_text(x=25, y=20, label=lm_eqn(mpg_data$mpg, mpg_data$spoiler_angle, mpg_data), parse=TRUE)
+#figure_plt3
+
+plt4 <- ggplot(mpg_data, aes(x=ground_clearance, y=mpg))
+lm4 <- lm(mpg ~ ground_clearance, data=mpg_data)
+lm4_yvals <- lm4$coefficients['ground_clearance']*mpg_data$ground_clearance + lm4$coefficients['(Intercept)']
+figure_plt4 <- plt4 + geom_point() + labs(x="Ground Clearance, in.") + geom_line(aes(y=lm4_yvals), color="red", size=0.75) + geom_text(x=10, y=60, label=lm_eqn(mpg_data$mpg, mpg_data$ground_clearance, mpg_data), parse=TRUE)
+#figure_plt4
+
+plt5 <- ggplot(mpg_data, aes(x=reorder(AWD, desc(AWD)), y=mpg))
+figure_plt5 <- plt5 + geom_boxplot(width=0.1) + xlab("AWD") + geom_point(color="grey50", alpha=0.50)
+#figure_plt5
+
+# Save Deliverable 1 Plots
+ggplot_multi_save("Images", "Figure", "png", "figure_plt", 1, 5, scale_factor=0.75)
+
+# Arrange into a Gallery and Save as a Single Figure
+del1_figures_gallery <- grid.arrange(figure_plt1, figure_plt2, figure_plt3, figure_plt4, figure_plt5, ncol=2)
+#del1_figures_gallery
+ggsave("Images/Figure_00.png", plot=del1_figures_gallery, width=10, height=10, units="in")
+
+
+## Deliverable 2
+
+# Import Suspension Coil Data
+coil_data <- read.csv("data/Suspension_Coil.csv")
+
+# Refactor coil_data vectors
+coil_data$VehicleID <- as.factor(coil_data$VehicleID)
+coil_data$Manufacturing_Lot <- as.factor(coil_data$Manufacturing_Lot)
+
+# Summarize coil_data PSI Column
+
+# Total Summary
+total_summary <- coil_data %>% summarize(Mean=mean(PSI), Median=median(PSI), Variance=var(PSI), SD=sd(PSI))
+
+# Lot Summary
+lot_summary <- coil_data %>% group_by(Manufacturing_Lot) %>% summarize(Mean=mean(PSI), Median=median(PSI), Variance=var(PSI), SD=sd(PSI))
+
+
+## Deliverable 3
+
+# Perform t-tests on coil_data PSI Column
+
+# Overall Samples t-tests
+
+# First, select 50 Random Samples from the Overall Corpus
+coil_data_overall_50_samples <- sample_n(coil_data, 50)
+
+# Then compare sampled data to original population
+t.test(coil_data_overall_50_samples$PSI, mu=mean(coil_data$PSI))
+
+# Samples t-tests by Lot
+
+# Lot 1
+t.test(subset(coil_data, coil_data$Manufacturing_Lot=="Lot1")$PSI, mu=mean(coil_data$PSI))
+
+# Lot 2
+t.test(subset(coil_data, coil_data$Manufacturing_Lot=="Lot2")$PSI, mu=mean(coil_data$PSI))
+
+# Lot 3
+t.test(subset(coil_data, coil_data$Manufacturing_Lot=="Lot3")$PSI, mu=mean(coil_data$PSI))
+
+## Deliverable 4
+
+# See README.md
